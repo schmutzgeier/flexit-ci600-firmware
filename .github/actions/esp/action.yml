@@ -1,6 +1,6 @@
 # The esphome-flexit-modbus-server the link is tested against, from the same owner as this repo (the PR's head for
-# a pull request) and the branch of the same name. Falls back to that owner's panel branch, then to MSkjel's,
-# so a tag or a branch the ESP repo doesn't have still gets one.
+# a pull request) and the branch of the same name, for a tag the branches it is on. Falls back to that owner's
+# panel branch, then to MSkjel's, so a branch the ESP repo doesn't have still gets one.
 name: esp
 description: The ESP repo for the same fork and branch
 inputs:
@@ -21,7 +21,11 @@ runs:
         FALLBACK: ${{ inputs.fallback-ref }}
       run: |
         has() { git ls-remote --exit-code --heads "https://github.com/$1/esphome-flexit-modbus-server.git" "$2" >/dev/null 2>&1; }
-        for c in "$OWNER $BRANCH" "$OWNER $FALLBACK" "MSkjel $FALLBACK"; do
+        tries=("$OWNER $BRANCH")
+        if [ "$GITHUB_REF_TYPE" = tag ]; then  # a release: the branches the tag is on, needs fetch-depth: 0
+          for b in $(git branch -r --contains HEAD --format='%(refname:lstrip=3)' | grep -vx HEAD); do tries+=("$OWNER $b"); done
+        fi
+        for c in "${tries[@]}" "$OWNER $FALLBACK" "MSkjel $FALLBACK"; do
           set -- $c
           if has "$1" "$2"; then
             echo "ESP repo: $1/esphome-flexit-modbus-server@$2"

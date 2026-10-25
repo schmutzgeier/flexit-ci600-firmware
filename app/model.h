@@ -1,4 +1,4 @@
-// Panel state, everything the UI shows and edits. Filled from the CU60, the ESP and our own hardware, or with
+// Panel state, everything the UI shows and edits. Filled from the CX60, the ESP and our own hardware, or with
 // made-up data in the simulator.
 #pragma once
 #include <stdbool.h>
@@ -20,12 +20,12 @@ enum { SAVER_TEXT_BAND, SAVER_TEXT_SHADOW, SAVER_TEXT_PLAIN, SAVER_TEXT_SMALL, S
 enum { POPUPS_ALL, POPUPS_NOT_FILTER, POPUPS_OFF, POPUPS_COUNT };              // which new alarms pop up
 enum { LED_OK_ALWAYS, LED_OK_NOT_NIGHT, LED_OK_NEVER, LED_OK_COUNT };          // when the OK light is on
 enum { RESET_POWER, RESET_PIN, RESET_WATCHDOG, RESET_SOFTWARE, RESET_FAULT };  // why the panel last started
-#define ALARM_FILTER 10                  // CU60 filter reminder, sorted after all other alarms
+#define ALARM_FILTER 10                  // CX60 filter reminder, sorted after all other alarms
 #define ALARM_FILTER_GUARD 3             // the filter guard input, on the filter light like the reminder
 extern const uint16_t TILE_DEFAULTS[4];  // factory dashboard tiles
 
 typedef struct {
-  uint8_t code;            // CU60 alarm code
+  uint8_t code;            // CX60 alarm code
   uint8_t dd, mo, hh, mi;  // when it started
   bool active;             // for history entries, still active
 } alarm_t;
@@ -33,7 +33,7 @@ typedef struct {
 // One period of a day in the week program
 typedef struct {
   uint8_t start_h, start_m, end_h, end_m, level;  // level = MODE_*
-  uint8_t idx;                                    // which of the day's four CU60 slots it uses
+  uint8_t idx;                                    // which of the day's four CX60 slots it uses
   int16_t setpoint;                               // 0.1 C
 } period_t;
 
@@ -83,13 +83,35 @@ typedef struct {
   bool heater_enabled, cooling_enabled;  // heater: as the unit has it, the panels' flags ORed
 
   // filter
-  uint16_t filter_hours;  // since the last change
-  uint16_t filter_days;   // change interval
+  uint16_t filter_hours;   // since the last change
+  uint16_t filter_days;    // change interval
+  uint16_t filter_resets;  // times the filter timer was reset
+
+  // the installer's settings, in the Advanced menu. All in the CX60
+  struct {
+    uint8_t boost_speed, cool_min_speed, away_speed, fireplace_sup, fireplace_ext;  // MODE_*
+    uint8_t fire_mode;    // 1 stop both fans, 2 both at max, 3 extract at max, 4 supply at max
+    uint8_t rotor_alarm;  // 0 stop the unit, 1 keep running
+    bool cool_recovery, deice, extract_sensor, outdoor_sensor, filter_guard, ext_setpoint;
+    int16_t neutral_cool, neutral_heat, recovery_diff;    // 0.1 C
+    int16_t cool_min_outdoor, deice_temp, less_air_temp;  // 0.1 C
+    int16_t away_setpoint;                                // 0.1 C
+    int16_t cal[4];                                       // sensor offsets, 0.1 C: supply, extract, outdoor, water
+    uint16_t cool_delay, start_delay[4], run_on;          // s
+    uint16_t away_hold;                                   // min
+    uint8_t deice_rotor;                                  // rotor speed while de-icing, 180 = full
+    uint8_t deice_period[2], deice_freq[2];               // de-icing: rotor, then fan reduction
+    uint8_t deice_fan, deice_ramp;                        // fan % and ramp time during a fan reduction
+    uint16_t pi[12];  // regulator K and I: heating, rotor, cooling, each for supply then extract air
+  } adv;
+  uint8_t test_speed;               // fan test running, MODE_* + 1, 0 = none
+  uint8_t test_fans, test_cooling;  // fan and cooling test running, %, 0 = none
+  bool test_heater, test_rotor;
 
   // alarms
   alarm_t alarms[8];  // active alarms, the filter reminder last
   uint8_t n_alarms;
-  alarm_t history[5];  // the CU60's alarm log
+  alarm_t history[5];  // the CX60's alarm log
   uint8_t n_history;
 
   // schedule
@@ -110,11 +132,13 @@ typedef struct {
   uint8_t trend[TR_N][TREND_LEN];  // last 24 h of the temperatures, oldest first, encoded by trend_code()
 
   // system
-  uint16_t cu60_version;
-  uint32_t fw_version;  // maj<<16 | min<<8 | patch
+  uint16_t cx60_version;
+  uint16_t panel_version[3];  // what the CX60 found at each address when it started, maj<<8 | min, 0 = none
+  uint8_t dip;                // the unit's DIP switches, bit 0 = DS1
+  uint32_t fw_version;        // maj<<16 | min<<8 | patch
   uint8_t bus_addr;
   uint32_t bus_ok, bus_err, bus_ours;  // frames received, bad frames, polls to this panel
-  bool bus_offline;                    // no frames from the CU60 for a while, so the values shown are stale
+  bool bus_offline;                    // no frames from the CX60 for a while, so the values shown are stale
   uint32_t h_total, h_stop, h_min, h_normal, h_max, h_rotor, h_heater;  // run hours
   uint8_t cpu_busy;                                                     // % of the last second the CPU was awake
   uint8_t reset_cause;                                                  // RESET_*
@@ -147,6 +171,7 @@ typedef struct {
   uint8_t led_ok;                 // LED_OK_*
   bool led_alarm, led_filter;     // use the alarm and filter lights
   bool auto_lock;                 // lock the keys when idle
+  bool advanced;                  // show the Advanced menu
   uint8_t alarm_popups;           // POPUPS_*
   bool auto_dst, dst_now;         // switch summer time ourselves if no ESP, and whether we're on it now
   uint16_t leds;                  // light overrides from the ESP, 2 bits per light: LED_*

@@ -12,7 +12,7 @@
 #include "ui.h"
 #include <string.h>
 
-// CU60 registers, taken from its firmware
+// CX60 registers, taken from its firmware
 #define R_CFG_MODE 0x000  // the mode set, a boost or the week program may run another
 #define R_SETPOINT 0x00C
 #define R_MASTER_PANEL 0x00F
@@ -20,10 +20,10 @@
 #define R_WEEK_LAST 0x08B
 #define R_CLOCK_HI 0x094
 #define R_CLOCK_LO 0x095
-#define R_CU60_VERSION 0x097
+#define R_CX60_VERSION 0x097
 #define R_PANEL1_VERSION 0x099  // input register 3 of each panel at discovery, 0x099/0x09B/0x09D. Stock is 7.x
 #define R_PANEL3_VERSION 0x09D
-#define R_SETTINGS_LAST 0x0BD  // 0x000..0x0BD are the settings the CU60 sends when it starts
+#define R_SETTINGS_LAST 0x0BD  // 0x000..0x0BD are the settings the CX60 sends when it starts
 #define R_ST_SETPOINT 0x0BE    // 0x0BE..0x112 is the status broadcast. The setpoint set, or the potentiometer's
 #define R_ST_MODE 0x0BF        // the mode running
 #define R_ST_FILTER_H 0x0C0
@@ -38,12 +38,13 @@
 #define R_ST_HEAT 0x0C9
 #define R_ST_FAN 0x0CA
 #define R_ST_TOTAL_H 0x0CB
+#define R_FILTER_RESETS 0x0CC
 #define R_ALARMS 0x0CD  // active alarms, 10 x (code, since hi, since lo)
 #define R_ALARMS_END 0x0EA
 #define R_LOG 0x0EB  // alarm log, 5 x (code, start hi, start lo, end hi, end lo)
 #define R_LOG_END 0x103
-#define R_ST_HEATER 0x10E  // the heater may run: the panels' flags below ORed, and the unit has one
-#define R_DS1_ELECTRIC 0x10F
+#define R_ST_HEATER 0x10E     // the heater may run: the panels' flags below ORed, and the unit has one
+#define R_DS1_ELECTRIC 0x10F  // the DIP switches DS1..DS4
 #define R_DS4_FAN_AC 0x112
 #define R_CFG2_FIRST 0x113  // 0x113..0x14B, more settings
 #define R_CFG_REGULATION 0x114
@@ -55,7 +56,7 @@
 #define R_CMD_BOOST_OFF 0x13B
 #define R_CMD_CLR_ALARM 0x13C
 #define R_CMD_CLR_LOG 0x13D
-#define R_CFG_HEATER 0x13F  // heater allowed, one flag per panel address. The CU60 ORs those of the panels present
+#define R_CFG_HEATER 0x13F  // heater allowed, one flag per panel address. The CX60 ORs those of the panels present
 #define R_CFG_HEATER_LAST 0x141
 #define R_CMD_FACTORY 0x142
 #define R_CMD_LAST 0x149
@@ -86,7 +87,7 @@ static uint32_t U32(uint16_t hi) {  // a hi/lo pair, interrupts off so the halve
   return v;
 }
 
-// The CU60 only accepts the setpoint and NORMAL fan % from the master panel, the lowest panel address.
+// The CX60 only accepts the setpoint and NORMAL fan % from the master panel, the lowest panel address.
 static bool is_master(void) {
   uint16_t m = U(R_MASTER_PANEL);
   return m == 0 || m == M.bus_addr;
@@ -161,7 +162,7 @@ static void read_week(int day) {
   sched_store(day, p, n);
 }
 
-// The CU60 relays each register back and read_week picks them up.
+// The CX60 relays each register back and read_week picks them up.
 void plat_period_set(void) {
   const period_edit_t *p = &M.period;
   uint16_t r = R_WEEK_FIRST + p->day * 16 + p->idx * 4;
@@ -173,7 +174,7 @@ void plat_period_set(void) {
 }
 
 static void read_runtime(void) {
-  // The CU60 only sends the word that changed, the high words only come when it starts. Until then the
+  // The CX60 only sends the word that changed, the high words only come when it starts. Until then the
   // counters are the copy kept in flash, see unit_cached().
   uint16_t h16 = U(R_ST_TOTAL_H);  // 16-bit hours, used until the seconds counter is there
   if (!mb_written(R_RT_STOP) || !mb_written(R_RT_TOTAL)) {
@@ -186,28 +187,28 @@ static void read_runtime(void) {
   M.h_max = U32(R_RT_MAX) / 3600;
   M.h_rotor = U32(R_RT_ROTOR) / 3600;
   M.h_heater = U32(R_RT_HEATER) / 3600;
-  // A high word that changed while we weren't listening is lost, the CU60's 16-bit hours correct the total.
+  // A high word that changed while we weren't listening is lost, the CX60's 16-bit hours correct the total.
   uint32_t h = U32(R_RT_TOTAL) / 3600;
   M.h_total = mb_written(R_ST_TOTAL_H) ? h + (uint32_t) (int16_t) (h16 - (uint16_t) h) : h;
 }
 
 static void fan_outputs(void) { M.fan_ext = M.mode_now >= MODE_MIN ? M.fan_pct[M.mode_now - 1][1] : 0; }
 
-// The CU60 relays the clock's two words in separate exchanges, a few ms apart. A new high word with the old low one
+// The CX60 relays the clock's two words in separate exchanges, a few ms apart. A new high word with the old low one
 // is 18 hours off, so the clock is only read once the words have stopped changing for CLOCK_SETTLE_MS.
 #define CLOCK_SETTLE_MS 500
 #define CLOCK_SLACK_S 2        // a clock this close to ours isn't followed
 #define CLOCK_UNDONE_S 5       // a panel writing its clock this soon after the keys set ours keeps its own
 static bool clock_news;        // a clock word changed
 static uint32_t clock_ms;      // when the last one did
-static uint32_t clock_minute;  // the minute the CU60 last got from us, or sent us, see minute_of()
+static uint32_t clock_minute;  // the minute the CX60 last got from us, or sent us, see minute_of()
 static uint8_t clock_keys_s;   // seconds left of CLOCK_UNDONE_S after the clock was set on the keys
 
-// The CU60 starts a week program period once its clock is past the start, not at it. Minutes count from :01
+// The CX60 starts a week program period once its clock is past the start, not at it. Minutes count from :01
 // and go out then, as the stock panel's every-second writes do.
 static uint32_t minute_of(uint32_t t) { return (t - 1) / 60; }
 
-// A stock panel on the bus, the CU60 keeps what each one said at discovery
+// A stock panel on the bus, the CX60 keeps what each one said at discovery
 _Static_assert(FW_MAJOR != 7, "we'd pass for a stock panel");
 static bool stock_panel(void) {
   for (uint16_t r = R_PANEL1_VERSION; r <= R_PANEL3_VERSION; r += 2)
@@ -218,12 +219,16 @@ static bool stock_panel(void) {
 
 static void reg_changed(uint16_t r) {
   int16_t v = MB.hold[r];
+  if (r >= R_DS1_ELECTRIC && r <= R_DS4_FAN_AC) {
+    uint8_t bit = (uint8_t) (1u << (r - R_DS1_ELECTRIC));
+    M.dip = v ? M.dip | bit : M.dip & ~bit;
+  }
   switch (r) {
     case R_CFG_MODE:
       val_set_bus(V_MODE, v & 3);
       break;
     case R_CFG_REGULATION:
-      v = v != 0;  // the CU60 takes anything but 0 as supply air
+      v = v != 0;  // the CX60 takes anything but 0 as supply air
       break;
     case R_ST_MODE:
       M.mode_now = (uint8_t) (v & 3);
@@ -232,6 +237,9 @@ static void reg_changed(uint16_t r) {
       break;
     case R_ST_FILTER_H:
       M.filter_hours = (uint16_t) v;
+      break;
+    case R_FILTER_RESETS:
+      M.filter_resets = (uint16_t) v;
       break;
     case R_ST_BOOST_S:
       M.boost_left = (uint16_t) ((v + 59) / 60);
@@ -277,8 +285,8 @@ static void reg_changed(uint16_t r) {
     case R_ST_TOTAL_H:
       read_runtime();
       break;
-    case R_CU60_VERSION:
-      M.cu60_version = (uint16_t) v;
+    case R_CX60_VERSION:
+      M.cx60_version = (uint16_t) v;
       break;
     case R_DS1_ELECTRIC:
       val_set_bus(V_FEAT_FIRST + FEAT_WATER_HEATER, v == 0);
@@ -288,7 +296,7 @@ static void reg_changed(uint16_t r) {
       break;
     case R_CLOCK_HI:
     case R_CLOCK_LO:
-      // The settings block the CU60 sends when it starts has the clock it saved at its last power cut. Only a
+      // The settings block the CX60 sends when it starts has the clock it saved at its last power cut. Only a
       // panel's write is worth following, unless we have no clock at all. Otherwise ours goes out right away.
       if (mb_relayed(r) || clock_to_unix() <= SECS_1970_TO_2000) {
         clock_news = true;
@@ -307,22 +315,23 @@ static void reg_changed(uint16_t r) {
         read_week((r - R_WEEK_EN) / 4);
       else if (r >= R_RT_STOP && r <= R_RT_LAST)
         read_runtime();
+      else if (r >= R_PANEL1_VERSION && r <= R_PANEL3_VERSION && !((r - R_PANEL1_VERSION) & 1))
+        M.panel_version[(r - R_PANEL1_VERSION) / 2] = (uint16_t) v;
       break;
   }
-  // settings kept in the CU60 like the fan % and setpoint, see values.h
-  val_t id = val_by_cu60(r);
+  // settings kept in the CX60 like the fan % and setpoint, see values.h
+  val_t id = val_by_cx60(r);
   // Our heater flag is one vote of three, R_ST_HEATER has the result. A stock panel writes 0x117 as each of its
   // periods starts and ends, so with one on the bus a relay of it isn't a change of our setting.
   if (id == V_HEATER || (id == V_WEEK_PROGRAM && mb_relayed(r) && stock_panel()))
     id = V_NONE;
   if (id != V_NONE) {
     val_set_bus(id, v / val_def(id).scale);
-    if (id >= V_FAN_MIN_SUP && id <= V_FAN_MAX_EXT)
-      fan_outputs();
+    fan_outputs();  // in case it was a fan %
   }
 }
 
-// The CU60 sends its clock at start-up and whenever a panel writes it, which every panel does once a minute. We
+// The CX60 sends its clock at start-up and whenever a panel writes it, which every panel does once a minute. We
 // follow it, unless it's our own write coming back or another panel's that's only a little off. Following those
 // would just make the clocks fall behind.
 static void clock_changed(void) {
@@ -341,7 +350,7 @@ static void clock_changed(void) {
   }
 }
 
-// The CU60 has no clock of its own and keeps what the panels write. Stock writes it every second, the week program
+// The CX60 has no clock of its own and keeps what the panels write. Stock writes it every second, the week program
 // only needs minutes.
 static void clock_write(uint32_t t) {
   clock_minute = minute_of(t);
@@ -354,7 +363,7 @@ void unit_init(void) {
   M.fw_version = (uint32_t) FW_MAJOR << 16 | FW_MINOR << 8 | FW_PATCH;
 }
 
-// The settings, and the runtime counters since the CU60 only sends their high words when it starts
+// The settings, and the runtime counters since the CX60 only sends their high words when it starts
 bool unit_cached(uint16_t r) {
   if (r == R_CLOCK_HI || r == R_CLOCK_LO)
     return false;
@@ -366,7 +375,7 @@ bool unit_cached(uint16_t r) {
 
 void unit_cache_load(uint16_t r, int16_t v) { mb_load(r, v); }
 
-// Nobody sends these again when we restart: a counter's high word, which the CU60 sends once, and another
+// Nobody sends these again when we restart: a counter's high word, which the CX60 sends once, and another
 // device's week program change. Without an ESP every relay is someone on another panel, so those too.
 static bool save_soon(uint16_t r) {
   if (r >= R_RT_STOP)
@@ -405,19 +414,51 @@ void unit_poll(void) {
   }
 }
 
-// The CU60 only counts a boost down while something answers at address 1. One whose seconds don't fall is
+// The manual tests in Advanced > Test. The CX60 only uses a test value while its enable register is set, and clears
+// that after 60 s.
+#define TEST_S 60
+static const struct {
+  val_t v;
+  uint16_t enable;
+} TESTS[] = {{V_TEST_SPEED, 0x143},
+             {V_TEST_FANS, 0x144},
+             {V_TEST_HEATER, 0x146},
+             {V_TEST_ROTOR, 0x148},
+             {V_TEST_COOLING, 0x149}};
+static uint8_t test_s[LEN(TESTS)];  // seconds left of each test
+
+static bool test_changed(val_t v) {
+  for (unsigned i = 0; i < LEN(TESTS); i++)
+    if (TESTS[i].v == v) {
+      int32_t x = val_get(v);
+      if (x)
+        bus_write(val_def(v).cx60, (int16_t) (v == V_TEST_SPEED ? x - 1 : x));
+      bus_write(TESTS[i].enable, x != 0);
+      test_s[i] = x ? TEST_S : 0;
+      return true;
+    }
+  return false;
+}
+
+static void tests_second(void) {
+  for (unsigned i = 0; i < LEN(TESTS); i++)
+    if (test_s[i] && !--test_s[i])
+      val_set_bus(TESTS[i].v, 0);  // over, the CX60 has cleared its enable too
+}
+
+// The CX60 only counts a boost down while something answers at address 1. One whose seconds don't fall is
 // stopped, rather than shown as running for good.
 #define BOOST_STUCK_S 10
 static uint16_t boost_seen;  // R_ST_BOOST_S a second ago
 static uint8_t boost_stuck_s;
-#define HEATER_SETTLE_MS 2000  // for the CU60 to pick our flag up and say what it made of it
+#define HEATER_SETTLE_MS 2000  // for the CX60 to pick our flag up and say what it made of it
 static uint32_t heater_ms;     // when the heater was last switched on the panel
 static bool heater_asked;      // switched on there, and the unit hasn't said yet
 
 void unit_second(void) {
   static uint32_t frames_seen;
   static uint8_t quiet_s;
-  // The CU60 sends something every ~110 ms. After 5 s of silence, what's on screen is out of date.
+  // The CX60 sends something every ~110 ms. After 5 s of silence, what's on screen is out of date.
   if (MB.frames != frames_seen) {
     frames_seen = MB.frames;
     quiet_s = 0;
@@ -450,46 +491,56 @@ void unit_second(void) {
     clock_write(t);
   if (clock_keys_s)
     clock_keys_s--;
+  tests_second();
 }
 
 // ---------------------------------------------------------------- changes made on the panel
 void plat_value_changed(val_t v) {
   val_def_t d = val_def(v);
+  if (test_changed(v))
+    return;
   if (d.flags & VF_CLOCK) {
     clock_keys_s = CLOCK_UNDONE_S;
     plat_time_set();
     return;
   }
   if (v == V_BUS_ADDR)
-    MB.addr = M.bus_addr;  // the CU60 only notices after its next restart
+    MB.addr = M.bus_addr;  // the CX60 only notices after its next restart
   if (v == V_ROOM_OFFSET)
     M.t_room = T_NONE;  // start over with the new offset instead of smoothing toward it
-  if (!(d.flags & VF_CU60))
+  if (!(d.flags & VF_CX60))
     return;
   if (v == V_BOOST) {
     bus_write(M.boost_on ? R_CMD_BOOST_ON : R_CMD_BOOST_OFF, 1);
     return;
   }
   if (v == V_HEATER) {
-    // The CU60 ORs the flags of the panels present, so off has to clear every panel's
+    // The CX60 ORs the flags of the panels present, so off has to clear every panel's
     heater_ms = board_ms();
     heater_asked = M.heater_enabled;
     if (M.heater_enabled)
-      bus_write(val_cu60_reg(v), 1);
+      bus_write(val_cx60_reg(v), 1);
     else
       for (uint16_t r = R_CFG_HEATER; r <= R_CFG_HEATER_LAST; r++)
         bus_write(r, 0);
     return;
   }
-  // We're not the master, so the CU60 would just undo it. The ESP is, and gets the change over the link. While
-  // it's offline we write it anyway, and the CU60's relay puts the value back on screen.
+  // We're not the master, so the CX60 would just undo it. The ESP is, and gets the change over the link. While
+  // it's offline we write it anyway, and the CX60's relay puts the value back on screen.
   if ((d.flags & VF_MASTER) && !is_master() && HAS(FEAT_ESP) && M.esp_online)
     return;
-  bus_write(val_cu60_reg(v), (int16_t) (val_get(v) * d.scale));
-  if (v >= V_FAN_MIN_SUP && v <= V_FAN_MAX_EXT)
-    fan_outputs();
+  bus_write(val_cx60_reg(v), (int16_t) (val_get(v) * d.scale));
+  fan_outputs();  // in case it was a fan %
   if (v == V_REGULATION && M.regulation == REG_EXTRACT)
     bus_write(R_CFG_EXTRACT_SENSOR, 1);  // like the stock panel, the regulation does nothing without it
+}
+
+// From the ESP after we started. A change of ours the CX60 hasn't read yet is newer, so it stays.
+void plat_cx60_reg(uint16_t reg, int16_t value) {
+  uint32_t s = board_irq_save();
+  if (reg < MB_REGS && !(MB.pending[reg / 32] >> (reg % 32) & 1))
+    mb_load(reg, value);
+  board_irq_restore(s);
 }
 
 void plat_save(bool by_user) { settings_touch(by_user); }
@@ -531,7 +582,7 @@ void plat_action(int a) {
   }
 }
 
-// The clock was set on the panel or by the ESP. Write it to the CU60 so it and the other panels follow.
+// The clock was set on the panel or by the ESP. Write it to the CX60 so it and the other panels follow.
 void plat_time_set(void) {
   uint32_t t = clock_to_unix(), from = board_rtc_get();
   clock_from_unix(t);

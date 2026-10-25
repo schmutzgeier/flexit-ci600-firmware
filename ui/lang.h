@@ -152,7 +152,6 @@
   X(UNIT_MIN, "min") \
   X(BOOST_TIME_HELP, "How long a boost lasts.") \
   X(BOOST_NEEDS_ADDR_1, "A boost needs a panel at address 1") \
-  X(FAN_SPEEDS, "Fan speeds") \
   X(MIN_SUPPLY, "Min, supply") \
   X(MIN_SUPPLY_HELP, "Supply fan output at MIN.") \
   X(MIN_EXTRACT, "Min, extract") \
@@ -323,13 +322,13 @@
   X(ABOUT_HELP, "Versions and what is installed.") \
   X(EQUIPMENT_HELP, "What is connected. Settings and views for missing equipment are hidden.") \
   X(BUS, "Bus") \
-  X(BUS_HELP, "Modbus traffic between this panel and the CU60.") \
+  X(BUS_HELP, "Modbus traffic between this panel and the CX60.") \
   X(DIAGNOSTICS, "Diagnostics") \
   X(DIAGNOSTICS_HELP, "Uptime, restarts, memory and other numbers for finding faults.") \
   X(PANEL_ADDRESS, "Panel address") \
   X(PANEL_ADDRESS_HELP, \
     "Use 3 if an ESP is at address 1, otherwise 1. Only the lowest address can change the setpoint and NORMAL fan " \
-    "speeds. Restart the unit after changing this, since the CU60 only looks for panels when it starts.") \
+    "speeds. Restart the unit after changing this, since the CX60 only looks for panels when it starts.") \
   X(KEY_LOCK, "Key lock") \
   X(KEY_LOCK_HELP, "Hold ? for 3 s to lock or unlock the keys.") \
   X(LOCK_WHEN_IDLE, "Lock when idle") \
@@ -340,7 +339,7 @@
   X(RESET_PANEL_SETTINGS_HELP, \
     "Restores this panel's settings to the defaults and restarts it. The address and equipment settings are kept.") \
   X(FACTORY_RESET_UNIT, "Factory reset unit") \
-  X(FACTORY_RESET_UNIT_HELP, "Restores all settings in the unit (CU60) to the factory defaults.") \
+  X(FACTORY_RESET_UNIT_HELP, "Restores all settings in the unit (CX60) to the factory defaults.") \
   X(NOTHING_YET, "Nothing yet") \
   X(ESP_OFFLINE, "ESP offline") \
   X(N_ITEM, "%d item") \
@@ -351,7 +350,7 @@
   X(ALL_CLEAR, "All clear") \
   X(HOURS_TOTAL, "%s total") \
   X(NO_CONTACT, "No contact") \
-  X(ADDRESS_CU60, "Address %d, CU60 %d.%02d") \
+  X(ADDRESS_CX60, "Address %d, CX60 %d.%02d") \
   X(ADDRESS, "Address %d") \
   X(MENU, "Menu") \
   X(START, "Start") \
@@ -386,7 +385,7 @@
     "A water heating coil instead of an electric heater. Adds the return water sensor and frost protection. Set " \
     "by a DIP switch in the unit.") \
   X(EQUIP_COOLING_HELP, "A cooler is connected to the unit.") \
-  X(VENTILATION_HELP, "Fan speed, boost, and how fast the fans run at each speed.") \
+  X(VENTILATION_HELP, "Fan speed and boost.") \
   X(TEMPERATURE_HELP, "The setpoint, heating and cooling, and what the sensors measure.") \
   X(COMFORT_MENU_HELP, "Automations from the ESP and their settings.") \
   X(ITEM_HELP, "Asking the ESP...") \
@@ -397,6 +396,134 @@
   X(DISPLAY_HELP, "Theme, brightness, night mode, the home screen, the lights and the language.") \
   X(DATE_AND_TIME_HELP, "The clock used by the unit and the week program.") \
   X(SYSTEM_HELP, "Versions, equipment, the bus and the keys.") \
+  /* the Advanced menu */ \
+  X(ADVANCED, "Advanced") \
+  X(ADVANCED_HELP, \
+    "Settings the installer normally sets once: fans, regulation, sensors, inputs, de-icing and tests.") \
+  X(ADVANCED_MENU, "Advanced menu") \
+  X(ADVANCED_MENU_HELP, "Shows Advanced in the menu, with the unit's installer settings. Wrong values there can make " \
+                        "the unit run badly.") \
+  X(INSTALLER_SETTINGS, "Installer settings") \
+  X(ADV_FANS_HELP, "Fan output at each speed, and the speed a boost runs at.") \
+  X(BOOST_SPEED, "Boost speed") \
+  X(BOOST_SPEED_HELP, "The speed a boost runs at.") \
+  X(REGULATION, "Regulation") \
+  X(REGULATION_HELP, "What the unit regulates on, the supply air limits, the neutral zones and the regulator tuning.") \
+  X(NEUTRAL_ZONES, "Neutral zones") \
+  X(COOLING_TO_ROTOR, "Cooling to rotor") \
+  X(COOLING_TO_ROTOR_HELP, "A gap between where the cooling stops and the rotor starts, so they don't fight.") \
+  X(ROTOR_TO_HEATING, "Rotor to heating") \
+  X(ROTOR_TO_HEATING_HELP, "A gap between the rotor at full speed and the heater starting.") \
+  X(REGULATOR_TUNING, "Regulator tuning") \
+  X(REGULATOR_TUNING_HELP, \
+    "The K and I values of the unit's regulators. Leave them alone unless you know what they do.") \
+  X(HEATING, "Heating") \
+  X(SUPPLY_AIR_K, "Supply air, K") \
+  X(SUPPLY_AIR_I, "Supply air, I") \
+  X(EXTRACT_AIR_K, "Extract air, K") \
+  X(EXTRACT_AIR_I, "Extract air, I") \
+  X(SUPPLY_K_HELP, "Gain when regulating on supply air. Higher reacts harder.") \
+  X(SUPPLY_I_HELP, "Integral time when regulating on supply air. Lower catches up faster, but can overshoot.") \
+  X(EXTRACT_K_HELP, "Gain when regulating on extract air. Higher reacts harder.") \
+  X(EXTRACT_I_HELP, "Integral time when regulating on extract air. Lower catches up faster, but can overshoot.") \
+  X(ADV_COOLING_HELP, "When the cooler is allowed to run.") \
+  X(MIN_OUTDOOR_TEMP, "Min outdoor temp") \
+  X(MIN_OUTDOOR_TEMP_HELP, "No cooling when it's colder than this outside.") \
+  X(MIN_FAN_SPEED, "Min fan speed") \
+  X(MIN_FAN_SPEED_HELP, "Cooling only runs at this fan speed or higher.") \
+  X(RESTART_DELAY, "Restart delay") \
+  X(RESTART_DELAY_HELP, "How long the cooler waits before it starts again.") \
+  X(UNIT_S, "s") \
+  X(HEAT_RECOVERY_HELP, "The rotor: cooling recovery, what a rotor alarm does, and de-icing.") \
+  X(COOLING_RECOVERY, "Cooling recovery") \
+  X(COOLING_RECOVERY_HELP, "When it's warmer outside than inside, the rotor keeps the coolness in.") \
+  X(DIFFERENCE, "Difference") \
+  X(DIFFERENCE_HELP, "How much warmer it has to be outside than inside for cooling recovery.") \
+  X(ROTOR_ALARM, "Rotor alarm") \
+  X(ROTOR_ALARM_HELP, "What the unit does if the rotor stops turning.") \
+  X(STOP_THE_UNIT, "Stop the unit") \
+  X(KEEP_RUNNING, "Keep running") \
+  X(DE_ICING, "De-icing") \
+  X(DE_ICING_HELP, "Keeps the rotor from icing up when it's very cold outside.") \
+  X(STARTS_BELOW, "Starts below") \
+  X(STARTS_BELOW_HELP, "De-icing starts when it's colder than this outside.") \
+  X(ROTOR_SPEED, "Rotor speed") \
+  X(ROTOR_SPEED_HELP, "How fast the rotor turns while de-icing. 180 is full speed.") \
+  X(LESS_AIR_BELOW, "Less air below") \
+  X(LESS_AIR_BELOW_HELP, "Colder than this outside, the supply fan drops to MIN and the extract fan to NORMAL.") \
+  X(ROTOR_PERIOD, "Rotor period") \
+  X(ROTOR_PERIOD_HELP, "How long each de-icing of the rotor lasts.") \
+  X(ROTOR_FREQUENCY, "Rotor frequency") \
+  X(ROTOR_FREQUENCY_HELP, "How often the rotor gets de-iced.") \
+  X(REDUCED_FAN_SPEED, "Reduced fan speed") \
+  X(REDUCED_FAN_SPEED_HELP, "Fan output while there's less air.") \
+  X(FAN_PERIOD, "Fan period") \
+  X(FAN_PERIOD_HELP, "How long each period with less air lasts.") \
+  X(FAN_FREQUENCY, "Fan frequency") \
+  X(FAN_FREQUENCY_HELP, "How often the periods with less air come.") \
+  X(RAMP_TIME, "Ramp time") \
+  X(RAMP_TIME_HELP, "How fast the fans go down to less air and back up again.") \
+  X(ADV_SENSORS_HELP, "Sensor offsets, which sensors are fitted, and the panel's own sensor.") \
+  X(SUPPLY_AIR_OFFSET, "Supply air offset") \
+  X(EXTRACT_AIR_OFFSET, "Extract air offset") \
+  X(OUTDOOR_OFFSET, "Outdoor offset") \
+  X(RETURN_WATER_OFFSET, "Return water offset") \
+  X(SENSOR_OFFSET_HELP, "Corrects what this sensor in the unit reads.") \
+  X(EXTRACT_AIR_SENSOR, "Extract air sensor") \
+  X(EXTRACT_AIR_SENSOR_HELP, "The extract air sensor is fitted. Regulating on extract air needs it.") \
+  X(OUTDOOR_SENSOR, "Outdoor sensor") \
+  X(OUTDOOR_SENSOR_HELP, "The outdoor sensor is fitted. Cooling and de-icing need it.") \
+  X(INPUTS, "Inputs") \
+  X(INPUTS_HELP, "What the unit does when something is connected to its inputs: fire alarm, filter guard, home/away " \
+                 "and fireplace.") \
+  X(FIRE_SMOKE, "Fire/smoke") \
+  X(FIRE_SMOKE_HELP, "What the fans do when the fire or smoke alarm input trips.") \
+  X(STOP_BOTH_FANS, "Stop both fans") \
+  X(BOTH_AT_MAX, "Both at max") \
+  X(EXTRACT_AT_MAX, "Extract at max") \
+  X(SUPPLY_AT_MAX, "Supply at max") \
+  X(FILTER_GUARD_HELP, "A pressure switch on the filters is connected. It raises an alarm when they're clogged.") \
+  X(EXTERNAL_SETPOINT, "External setpoint") \
+  X(EXTERNAL_SETPOINT_HELP, "Takes the setpoint from a knob wired to the unit, 10 to 30 degrees.") \
+  X(HOME_AWAY, "Home/away") \
+  X(AWAY_SPEED_HELP, "Fan speed while the home/away input is on.") \
+  X(AWAY_SETPOINT_HELP, "Setpoint while the home/away input is on.") \
+  X(HOLD_TIME, "Hold time") \
+  X(HOLD_TIME_HELP, "How long the unit stays in home/away after the input goes off.") \
+  X(FIREPLACE_INPUT, "Fireplace input") \
+  X(SUPPLY_SPEED, "Supply speed") \
+  X(SUPPLY_SPEED_HELP, "Supply fan speed while the fireplace input is on.") \
+  X(EXTRACT_SPEED, "Extract speed") \
+  X(EXTRACT_SPEED_HELP, "Extract fan speed while the fireplace input is on.") \
+  X(START_AND_STOP, "Start and stop") \
+  X(START_AND_STOP_HELP, "The pauses between the steps when the unit starts, and how long the fans run after the " \
+                         "heater.") \
+  X(START_DELAY_1, "Start delay 1") \
+  X(START_DELAY_2, "Start delay 2") \
+  X(START_DELAY_3, "Start delay 3") \
+  X(START_DELAY_4, "Start delay 4") \
+  X(START_DELAY_HELP, "How long the unit waits before this step when it starts.") \
+  X(FANS_AFTER_HEATER, "Fans after heater") \
+  X(FANS_AFTER_HEATER_HELP, "How long the fans keep going after the electric heater stops, to cool it down.") \
+  X(TEST, "Test") \
+  X(TEST_HELP, "Runs the fans, heater, rotor or cooler by hand to check them. A test lasts a minute.") \
+  X(TEST_FANS_HELP, "Runs both fans at this for a minute.") \
+  X(TEST_HEATER_HELP, "Turns the heater on for a minute.") \
+  X(TEST_ROTOR_HELP, "Turns the rotor at full speed for a minute.") \
+  X(TEST_COOLING_HELP, "Runs the cooler at this output for a minute.") \
+  X(UNIT_INFO_HELP, "The rotor's DIP switches in the unit, and the panels it found on the bus.") \
+  X(DS2_ROTOR_GUARD, "DS2 rotor guard") \
+  X(DS2_HELP, "DIP switch 2 in the unit, the rotor guard.") \
+  X(DS3_ROTOR_MOTOR, "DS3 rotor motor") \
+  X(DS3_HELP, "DIP switch 3 in the unit, the kind of rotor motor.") \
+  X(PANELS, "Panels") \
+  X(PANEL_1, "Panel 1") \
+  X(PANEL_2, "Panel 2") \
+  X(PANEL_3, "Panel 3") \
+  X(PANELS_HELP, "The software version of the panel at this address, as the unit saw it when it started.") \
+  X(NO_PANEL, "None") \
+  X(TIMES_CHANGED, "Times changed") \
+  X(TIMES_CHANGED_HELP, "How many times the filter timer has been reset.") \
   /* alarms, week program, info pages, help */ \
   X(ALARM, "Alarm") \
   X(OVERHEAT_THERMOSTAT, "Overheat thermostat") \
@@ -439,7 +566,7 @@
   X(ACTIVE_SINCE, "Active since") \
   X(LOGGED, "Logged") \
   X(SINCE, "Since") \
-  X(ALARM_HISTORY_HELP, "The last alarms the CU60 logged, newest first.") \
+  X(ALARM_HISTORY_HELP, "The last alarms the CX60 logged, newest first.") \
   X(ALARM_LIST_HELP, "Active alarms. Fix the cause, then use Reset alarms.") \
   X(PROGRAM_OFF, "Program off") \
   X(WEEK_HELP, "Fan speed through the week. Outside the coloured periods, the unit runs at the speed you've set. The " \
@@ -449,7 +576,7 @@
                      "runs at the speed you've set.") \
   X(PERIOD_ADDED, "Period added") \
   X(PANEL_FIRMWARE, "Panel firmware") \
-  X(CU60_SOFTWARE, "CU60 software") \
+  X(CX60_SOFTWARE, "CX60 software") \
   X(NOT_SEEN_YET, "not seen yet") \
   X(ESP, "ESP") \
   X(ESP_ADDRESS, "%s, address 1") \
@@ -483,7 +610,7 @@
   X(PAUSE_TOO_SHORT, "%s ms, too short") \
   X(PAUSE_NO_GAPS, "%s ms, no gaps") \
   X(BUS_PAGE_HELP, \
-    "Traffic on the RS-485 bus. The CU60 is the master and polls this panel. The ESP link uses the pause after the " \
+    "Traffic on the RS-485 bus. The CX60 is the master and polls this panel. The ESP link uses the pause after the " \
     "unit's status message. If that pause is under 13 ms, the panel stops the link for a while.") \
   X(UPTIME, "Uptime") \
   X(UPTIME_DAYS, "%lu d %02u:%02u") \
@@ -515,7 +642,7 @@
   X(NOTICE_ESPHOME, "Talks to Home Assistant through ESPHome") \
   X(NOTICE_FLEXIT, "Not made or approved by Flexit") \
   X(NOTICE_HARMED, "No ventilation units were harmed") \
-  X(NOTICE_CU60, "One CU60 was a bit confused") \
+  X(NOTICE_CX60, "One CX60 was a bit confused") \
   X(NOTICE_SINCE, "Fresh air since 2026") \
   X(NOTICE_OK, "OK: Flappy Fan") \
   X(KEYTEST, "Flappy Fan") \

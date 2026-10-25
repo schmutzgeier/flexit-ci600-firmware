@@ -401,15 +401,18 @@ enum HoldingRegisterIndex : uint16_t {};
 struct Server {
   uint16_t hold[0x200] = {};
   bool coil[0x200] = {};
-  std::vector<std::pair<uint16_t, uint16_t>> cmds;  // every send_cmd() to a CU60 register
-  std::vector<std::function<void(uint16_t, uint16_t)>> setting_cbs;
+  std::vector<std::pair<uint16_t, uint16_t>> cmds;  // every send_cmd() to a CX60 register
+  std::vector<std::function<void(uint16_t, uint16_t)>> setting_cbs, register_cbs;
   uint16_t read_holding_register(flexit_modbus_server::HoldingRegisterIndex r) { return hold[r]; }
   void add_on_setting_callback(std::function<void(uint16_t, uint16_t)> &&f) { setting_cbs.push_back(std::move(f)); }
-  void setting(uint16_t r, uint16_t v) {  // a setting changed for good, from us or a panel via the CU60
+  void add_on_register_callback(std::function<void(uint16_t, uint16_t)> &&f) { register_cbs.push_back(std::move(f)); }
+  void setting(uint16_t r, uint16_t v) {  // a setting changed for good, from us or a panel via the CX60
     if (hold[r] != v)
       for (auto &f : setting_cbs)
         f(r, v);
     hold[r] = v;
+    for (auto &f : register_cbs)
+      f(r, v);
   }
   void send_cmd(flexit_modbus_server::HoldingRegisterIndex r, uint16_t v) {
     setting(r, v);
@@ -431,7 +434,7 @@ struct Server {
   uint32_t quiet_min_us() { return 1000; }
   bool rx_empty() { return true; }
   uint32_t status_age_us() { return age_us; }
-  bool synced_ = true;  // a CU60 status broadcast has been heard since boot
+  bool synced_ = true;  // a CX60 status broadcast has been heard since boot
   bool synced() const { return synced_; }
   uint32_t status_min_age_us() { return min_age_us; }
   bool updating() const { return false; }    // true while a panel update from update.h owns the bus, never here

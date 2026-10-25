@@ -1,4 +1,4 @@
-// Fake data for the simulator, and a stand-in for what the CU60 does when a value changes.
+// Fake data for the simulator, and a stand-in for what the CX60 does when a value changes.
 #include "ui.h"
 #include "sim.h"
 #include <stdlib.h>
@@ -125,6 +125,30 @@ void sim_model_init(void) {
   M.heater_enabled = true;
   M.filter_hours = 2900;
   M.filter_days = 180;
+  M.filter_resets = 7;
+  // the installer's settings as they come from the factory
+  M.adv.boost_speed = M.adv.fireplace_sup = MODE_MAX;
+  M.adv.cool_min_speed = MODE_NORMAL;
+  M.adv.away_speed = M.adv.fireplace_ext = MODE_MIN;
+  M.adv.fire_mode = M.adv.rotor_alarm = 1;
+  M.adv.extract_sensor = M.adv.outdoor_sensor = true;
+  M.adv.neutral_cool = M.adv.neutral_heat = M.adv.recovery_diff = 10;
+  M.adv.cool_min_outdoor = 170;
+  M.adv.deice_temp = -150;
+  M.adv.less_air_temp = -250;
+  M.adv.deice_rotor = 25;
+  M.adv.deice_period[0] = M.adv.deice_period[1] = 10;
+  M.adv.deice_freq[0] = M.adv.deice_freq[1] = 2;
+  M.adv.deice_fan = 50;
+  M.adv.deice_ramp = 1;
+  M.adv.away_setpoint = 180;
+  M.adv.away_hold = 60;
+  M.adv.cool_delay = M.adv.run_on = 180;
+  M.adv.start_delay[1] = M.adv.start_delay[2] = M.adv.start_delay[3] = 20;
+  static const uint16_t pi[12] = {60, 900, 60, 900, 0, 90, 0, 90, 0, 90, 0, 90};
+  memcpy(M.adv.pi, pi, sizeof pi);
+  M.panel_version[2] = 0x0001;  // this one
+  M.dip = 0x1;                  // DS1 electric heater, EC fans
   M.week_program = true;
   static const period_t wk[] = {
       {6, 30, 8, 0, MODE_NORMAL, 0, 210}, {8, 0, 15, 30, MODE_MIN, 1, 190}, {15, 30, 22, 30, MODE_NORMAL, 2, 210}};
@@ -161,7 +185,7 @@ void sim_model_init(void) {
         (int16_t) (480 + 60 * home + 40 * lv_trigo_sin((int16_t) (i * 52 % 360)) / LV_TRIGO_SIN_MAX);
     M.item_trends[1].pt[i] = (int16_t) (38 + 8 * home / 10 + (i == 70 ? 25 : i == 71 ? 15 : 0));  // a shower at 6:30
   }
-  M.cu60_version = 0x0207;
+  M.cx60_version = 0x0207;
   M.fw_version = 0x000100;  // 0.1.0
   M.bus_addr = 3;
   M.bus_ok = 184233;
@@ -189,7 +213,7 @@ void sim_model_init(void) {
   M.features = FBIT(FEAT_ESP) | FBIT(FEAT_EC_FANS);
 }
 
-// Roughly what the CU60 would do. On the panel, hw/unit.c puts the change on the bus instead.
+// Roughly what the CX60 would do. On the panel, hw/unit.c puts the change on the bus instead.
 void plat_value_changed(val_t v) {
   switch (v) {
     case V_MODE:
@@ -211,6 +235,11 @@ void plat_value_changed(val_t v) {
 }
 
 void plat_time_set(void) {}
+void plat_cx60_reg(uint16_t reg, int16_t value) {  // hw/unit.c takes it like the CX60 sent it
+  val_t v = val_by_cx60(reg);
+  if (v != V_NONE)
+    val_set_bus(v, value / (int) val_def(v).scale);
+}
 void plat_save(bool by_user) { (void) by_user; }
 void plat_save_now(void) {}
 

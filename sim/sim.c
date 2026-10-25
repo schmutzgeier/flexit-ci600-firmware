@@ -897,13 +897,48 @@ int main(int argc, char **argv) {
   open(S_DIAGNOSTICS);
   shot("22b_diagnostics");
   key(KEY_BACK);
-  edit(S_FACTORY_RESET_UNIT);
+  edit(S_RESET_PANEL_SETTINGS);
   shot("23_confirm");
   run(2000);
   key(KEY_BACK);
   key(KEY_HELP);
   shot("24_help");
   key(KEY_BACK);
+  go(S_ADVANCED_MENU);
+  key(KEY_OK);
+  run(2000);
+  key(KEY_BACK);
+  open(S_ADVANCED);
+  shot("24b_advanced");
+  open(S_REGULATION);
+  shot("24c_advanced_regulation");
+  open(S_REGULATOR_TUNING);
+  shot("24d_advanced_tuning");
+  key(KEY_BACK);
+  key(KEY_BACK);
+  open(S_HEAT_RECOVERY);
+  go(S_DE_ICING);
+  key(KEY_OK);
+  run(2000);
+  shot("24e_advanced_deicing");
+  go(S_RAMP_TIME);
+  shot("24h_advanced_deicing_end");
+  key(KEY_BACK);
+  open(S_INPUTS);
+  edit(S_FIRE_SMOKE);
+  shot("24f_advanced_fire");
+  key(KEY_BACK);
+  key(KEY_BACK);
+  open(S_TEST);
+  go(S_HEATER);
+  key(KEY_OK);
+  run(2000);
+  shot("24g_advanced_test");
+  key(KEY_BACK);
+  open(S_UNIT);
+  shot("24i_advanced_unit");
+  go(S_PANEL_3);
+  shot("24j_advanced_unit_end");
   fresh();
   M.alarms[0] = (alarm_t) {10, 18, 10, 8, 14, true};
   M.n_alarms = 1;
@@ -952,7 +987,10 @@ int main(int argc, char **argv) {
   shot("40_no_esp_time");
   ui_go_home();
   key(KEY_OK);
-  open(S_VENTILATION);
+  M.advanced = true;
+  ui_rebuild();
+  open(S_ADVANCED);
+  open(S_FANS);
   go(S_MIN_SUPPLY);
   shot("41_no_esp_ventilation_ec");
   M.features &= ~FBIT(FEAT_EC_FANS);
@@ -1007,10 +1045,10 @@ int main(int argc, char **argv) {
   M.fan_ext = 75;
   ui_value_changed(V_NONE);
 
-  // ---- the ESP link: both ends run the real protocol code over a fake CU60. The scenes after this keep what
+  // ---- the ESP link: both ends run the real protocol code over a fake CX60. The scenes after this keep what
   // it sent, the items and the picture.
   fresh();
-  printf("\nESP link, one transaction after each CU60 status broadcast:\n");
+  printf("\nESP link, one transaction after each CX60 status broadcast:\n");
   settle();
   sim_esp_report("hello and state sync");
   sim_esp_items();

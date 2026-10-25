@@ -1,4 +1,4 @@
-// Runs the ESP's panel packages, turned into C++ by gen.py, against the panel's own link code on a fake CU60.
+// Runs the ESP's panel packages, turned into C++ by gen.py, against the panel's own link code on a fake CX60.
 // micros() and millis() run on simulated time.
 //   build/esp_test OUTDIR [PICTURE.ppm]
 #include <fstream>
@@ -13,6 +13,8 @@ void pn_second(void);
 int pn_online(void);
 int pn_get(uint16_t key);
 int pn_known(uint16_t key);
+int pn_reg(uint16_t reg);
+void pn_set_reg(uint16_t reg, int v);
 void pn_set(uint16_t key, int v);
 void pn_action(int a);
 int pn_idle(void);
@@ -91,13 +93,13 @@ static int fails, checks;
 
 static void step(const char *what) { printf("%s\n", what); }
 
-// ---------------------------------------------------------------- the fake CU60
+// ---------------------------------------------------------------- the fake CX60
 // Takes whatever the ESP flags for it, which is the setpoint and fan speeds it sets for the panel. Every 110 ms it
 // sends the status broadcast and the ESP and the panel talk in the quiet after it. The component calls the ESP
-// 150 us to 1.5 ms after the status frame ended. 30 ms after the status started the CU60 polls the panel, the
+// 150 us to 1.5 ms after the status frame ended. 30 ms after the status started the CX60 polls the panel, the
 // panel replies, and the ESP may send more in the gap after that.
 static unsigned long cycles, link_frames, gap_frames;
-static bool link_windows = true;     // false while the CU60 restarts and sends nothing
+static bool link_windows = true;     // false while the CX60 restarts and sends nothing
 static int link_lost_frames;         // the panel doesn't hear this many of the ESP's frames
 static int link_lost_answers;        // the ESP doesn't hear this many of the panel's answers
 static uint32_t link_quiet = 14400;  // end of the status broadcast to the poll, the panel refuses under 13 ms
@@ -181,7 +183,7 @@ static void cs60_cycle() {
   link_frame();
 }
 
-static void run(int n) {  // n CU60 cycles of 110 ms
+static void run(int n) {  // n CX60 cycles of 110 ms
   for (int c = 0; c < n; c++) {
     uint32_t t0 = now_us;
     cs60_cycle();
@@ -192,7 +194,7 @@ static void run(int n) {  // n CU60 cycles of 110 ms
     }
     pn_poll();
     for (int r = 0; r < 0x200; r++)
-      server->coil[r] = false;  // the CU60 has read everything flagged
+      server->coil[r] = false;  // the CX60 has read everything flagged
     if (++cycles % 9 == 0)
       pn_second();
     now_us = t0 + 110000;
@@ -513,9 +515,8 @@ int main(int argc, char **argv) {
   CHECK(!link_early, "%d frames sent sooner than %d us after the status", link_early, PBUS_START_MIN_US);
   CHECK(!link_late, "%d answers ended later than %u us after the status", link_late, (unsigned) link_end());
   CHECK(gap_frames > 0, "nothing sent in the gaps after polls");
-  CHECK(pn_get(K_SETPOINT) == 200 && pn_get(K_FAN_MAX_SUP) != 20,
-        "the ESP sent unit settings it doesn't have: setpoint %d, max supply %d", pn_get(K_SETPOINT),
-        pn_get(K_FAN_MAX_SUP));
+  CHECK(pn_get(K_SETPOINT) == 200 && pn_reg(0x004) != 20,
+        "the ESP sent unit settings it doesn't have: setpoint %d, max supply %d", pn_get(K_SETPOINT), pn_reg(0x004));
   printf("  linked and settled after %d cycles\n", c);
   CHECK(panel_screensaver.state == panel_screensaver.options[pn_get(K_SCREENSAVER)], "screensaver %s vs panel %d",
         panel_screensaver.state.c_str(), pn_get(K_SCREENSAVER));
@@ -857,7 +858,7 @@ int main(int argc, char **argv) {
   run(5);
   CHECK(panel_action.last == "reset_filter", "event %s", panel_action.last.c_str());
 
-  step("the CU60 restarts: no quiet for the link for a while");
+  step("the CX60 restarts: no quiet for the link for a while");
   link_windows = false;
   panel_brightness.control(40);  // ESP -> panel
   pn_set(K_NIGHT, 1);            // panel -> ESP
@@ -865,9 +866,9 @@ int main(int argc, char **argv) {
   CHECK(pn_get(K_BRIGHTNESS) != 40 && !panel_night.state, "something got through without a status broadcast");
   link_windows = true;
   run(20);
-  CHECK(pn_get(K_BRIGHTNESS) == 40, "brightness %d after the CU60 came back", pn_get(K_BRIGHTNESS));
-  CHECK(panel_night.state, "night mode not on after the CU60 came back");
-  CHECK(settled(), "something still waiting after the CU60 came back");
+  CHECK(pn_get(K_BRIGHTNESS) == 40, "brightness %d after the CX60 came back", pn_get(K_BRIGHTNESS));
+  CHECK(panel_night.state, "night mode not on after the CX60 came back");
+  CHECK(settled(), "something still waiting after the CX60 came back");
 
   step("frames and answers lost");
   link_lost_frames = 4;
@@ -881,8 +882,8 @@ int main(int argc, char **argv) {
 
   CHECK(panel_picture_status.state == "None", "picture status at the start: '%s'", panel_picture_status.state.c_str());
 
-  step("the panel refuses the link while the CU60 comes back too soon, then lets it back in");
-  link_quiet = 10000;  // the CU60 polls 10 ms after its status broadcast
+  step("the panel refuses the link while the CX60 comes back too soon, then lets it back in");
+  link_quiet = 10000;  // the CX60 polls 10 ms after its status broadcast
   run(40);
   CHECK(flexit::panel::link::tx.refused, "the ESP didn't take the refusal");
   CHECK(log_all.find("refuses the link") != std::string::npos, "the refusal wasn't logged");
@@ -950,10 +951,10 @@ int main(int argc, char **argv) {
   draw_dusk(panel_picture_dusk, 200, false);
   flexit::panel::picture::show("dusk");
   run(5);
-  link_windows = false;  // the CU60 restarts mid-picture
+  link_windows = false;  // the CX60 restarts mid-picture
   run(60);
   link_windows = true;
-  CHECK(picture("the CU60 restarted mid-picture", 3000) >= 0, "not shown after the CU60 restarted");
+  CHECK(picture("the CX60 restarted mid-picture", 3000) >= 0, "not shown after the CX60 restarted");
 
   pn_restart();
   CHECK(picture("panel restarted", 6000) >= 0, "picture not sent again after a panel restart");
@@ -1925,12 +1926,12 @@ int main(int argc, char **argv) {
 
   step("the ESP restarts while the panel has a newer unit setting, in Norwegian");
   server->hold[0x00D] = 150;  // the ESP's flash copy of the supply min
-  pn_set(K_SUPPLY_MIN, 160);  // changed on the panel while the ESP was down
+  pn_set_reg(0x00D, 160);     // changed on the panel while the ESP was down
   pn_set(K_LANGUAGE, 1);
   run(20);
   flexit::panel::language = 0;  // what the ESP has after a restart
   flexit::panel::restore_language();
-  flexit::panel::changed.reset();
+  flexit::panel::seen.reset();
   flexit::panel::link::send(K_HELLO, (uint32_t) PLINK_VERSION << 16 | HELLO_ASK);  // what panel::setup() sends
   int english = 0;  // cycles the panel showed an item in English
   for (int k = 0; k < 100; k++) {
@@ -1939,19 +1940,23 @@ int main(int argc, char **argv) {
   }
   CHECK(!english && !strcmp(pitem("fireplace").label, "Peis"), "in English for %d cycles after the hello, then '%s'",
         english, pitem("fireplace").label);
-  CHECK(pn_get(K_SUPPLY_MIN) == 160, "the ESP's hello put its old supply min %d on the panel", pn_get(K_SUPPLY_MIN));
+  CHECK(pn_reg(0x00D) == 160, "the ESP's hello put its old supply min %d on the panel", pn_reg(0x00D));
   pn_restart();  // the panel asks, and keeps its copy over the ESP's flash one
   c = run_until([] { return pn_online() && flexit::panel::link::connected && settled(); }, 2000);
   run(20);
-  CHECK(c >= 0 && pn_get(K_SUPPLY_MIN) == 160, "the panel restarted and took the ESP's old supply min %d",
-        pn_get(K_SUPPLY_MIN));
-  int supply_max = pn_get(K_SUPPLY_MAX) + 10;
+  CHECK(c >= 0 && pn_reg(0x00D) == 160, "the panel restarted and took the ESP's old supply min %d", pn_reg(0x00D));
+  int supply_max = pn_reg(0x00E) + 10;
   server->setting(0x00E, (uint16_t) supply_max);  // changed on another panel while this one restarts
   pn_restart();
   c = run_until([] { return pn_online() && flexit::panel::link::connected && settled(); }, 2000);
   run(20);
-  CHECK(c >= 0 && pn_get(K_SUPPLY_MAX) == supply_max, "the panel restarted and has supply max %d, the ESP saw %d",
-        pn_get(K_SUPPLY_MAX), supply_max);
+  CHECK(c >= 0 && pn_reg(0x00E) == supply_max, "the panel restarted and has supply max %d, the ESP saw %d",
+        pn_reg(0x00E), supply_max);
+  server->setting(0x0B5, 75);  // a regulator value, which has no link key: only the register goes
+  pn_restart();
+  c = run_until([] { return pn_online() && flexit::panel::link::connected && settled(); }, 2000);
+  run(20);
+  CHECK(c >= 0 && pn_reg(0x0B5) == 75, "the panel restarted and has heating K %d, the ESP saw 75", pn_reg(0x0B5));
 
   step("notes while the panel is away or restarting");
   pn_note(&icon, &level, &fresh);

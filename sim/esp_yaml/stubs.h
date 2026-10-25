@@ -365,14 +365,18 @@ struct HttpRequest {
   std::string type;                          // and its Content-Type
   std::string body, last_modified, expires;  // what it answers with
   bool down = false;                         // no answer at all
-  std::vector<http_request::Header> sent;    // the last request's headers
+  int status = 200;                          // the answer's HTTP status
+  std::string url;                           // the last request's URL
+  std::vector<http_request::Header> sent;    // and its headers
   uint32_t get_timeout() const { return 4500; }
-  std::shared_ptr<HttpContainer> get(const std::string &, const std::vector<http_request::Header> &h,
+  std::shared_ptr<HttpContainer> get(const std::string &u, const std::vector<http_request::Header> &h,
                                      const std::vector<std::string> &) {
+    url = u;
     sent = h;
     if (down)
       return nullptr;
     auto c = std::make_shared<HttpContainer>();
+    c->status_code = status;
     c->content_length = length ? length : body.size();
     c->type = type;
     c->body = body;

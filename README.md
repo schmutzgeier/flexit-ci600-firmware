@@ -188,29 +188,40 @@ in here.
 </tr>
 </table>
 
-The weather screensaver (`packages/panel/met.yaml` in the ESP repo) draws the sky for the time of day, the next
-hour's weather from MET Norway, and a landscape you pick.
+The weather screensaver (`packages/panel/met.yaml` in the ESP repo) draws the sky for the time of day and the next
+hour's weather from MET Norway over the cabin under the mountain. The bay goes by the Beaufort scale, from a mirror
+to white water, with its waves as high as MET Norway's ocean forecast says where it has one. Someone climbs the
+mountain, someone paddles the bay and the dog waits by the cabin; in the rain the climber runs the ridge, with waves
+over 2 m or wind over 12 m/s the kayaker runs the shore, with snow both are out on skis, and in rain over 4 mm all
+three are inside, behind the big window, as they are from 23:30 until the light goes out at midnight. Some hours a reindeer from the rock carvings
+peeks out of the trees or walks out of them, and a walrus swims in the bay. The birch by the cabin goes from bare to green to yellow with the
+year.
 
 <table>
 <tr>
 <td align="center"><img src="https://github.com/MSkjel/flexit-ci600-firmware/raw/screens/readme/weather_clear.png" width="280" alt="Weather picture: Clear"><br><sub>Clear</sub></td>
 <td align="center"><img src="https://github.com/MSkjel/flexit-ci600-firmware/raw/screens/readme/weather_sunset.png" width="280" alt="Weather picture: Sunset"><br><sub>Sunset</sub></td>
-<td align="center"><img src="https://github.com/MSkjel/flexit-ci600-firmware/raw/screens/readme/weather_aurora.png" width="280" alt="Weather picture: Northern lights"><br><sub>Northern lights</sub></td>
+<td align="center"><img src="https://github.com/MSkjel/flexit-ci600-firmware/raw/screens/readme/weather_aurora.png" width="280" alt="Weather picture: Northern lights and a full moon"><br><sub>Northern lights, full moon</sub></td>
 </tr>
 <tr>
-<td align="center"><img src="https://github.com/MSkjel/flexit-ci600-firmware/raw/screens/readme/weather_rain.png" width="280" alt="Weather picture: Heavy rain"><br><sub>Heavy rain</sub></td>
-<td align="center"><img src="https://github.com/MSkjel/flexit-ci600-firmware/raw/screens/readme/weather_snow.png" width="280" alt="Weather picture: Snow"><br><sub>Snow</sub></td>
+<td align="center"><img src="https://github.com/MSkjel/flexit-ci600-firmware/raw/screens/readme/weather_rain.png" width="280" alt="Weather picture: Heavy rain"><br><sub>Heavy rain, everyone indoors</sub></td>
+<td align="center"><img src="https://github.com/MSkjel/flexit-ci600-firmware/raw/screens/readme/weather_snow.png" width="280" alt="Weather picture: Snow"><br><sub>Snow, out on skis</sub></td>
 <td align="center"><img src="https://github.com/MSkjel/flexit-ci600-firmware/raw/screens/readme/weather_thunder.png" width="280" alt="Weather picture: Thunder"><br><sub>Thunder</sub></td>
 </tr>
 <tr>
 <td align="center"><img src="https://github.com/MSkjel/flexit-ci600-firmware/raw/screens/readme/weather_forecast.png" width="280" alt="Weather picture: With the forecast"><br><sub>With the forecast</sub></td>
-<td align="center"><img src="https://github.com/MSkjel/flexit-ci600-firmware/raw/screens/readme/weather_coast.png" width="280" alt="Weather picture: Coast"><br><sub>Coast</sub></td>
-<td align="center"><img src="https://github.com/MSkjel/flexit-ci600-firmware/raw/screens/readme/weather_mountains.png" width="280" alt="Weather picture: Mountains"><br><sub>Mountains</sub></td>
+<td align="center"><img src="https://github.com/MSkjel/flexit-ci600-firmware/raw/screens/readme/weather_dusk.png" width="280" alt="Weather picture: Rain at dusk"><br><sub>Rain at dusk, headlamp on</sub></td>
+<td align="center"><img src="https://github.com/MSkjel/flexit-ci600-firmware/raw/screens/readme/weather_winter.png" width="280" alt="Weather picture: A white winter day"><br><sub>A white winter day</sub></td>
 </tr>
 <tr>
-<td align="center"><img src="https://github.com/MSkjel/flexit-ci600-firmware/raw/screens/readme/weather_city.png" width="280" alt="Weather picture: City at night"><br><sub>City at night</sub></td>
 <td align="center"><img src="https://github.com/MSkjel/flexit-ci600-firmware/raw/screens/readme/weather_fog.png" width="280" alt="Weather picture: Fog"><br><sub>Fog</sub></td>
 <td align="center"><img src="https://github.com/MSkjel/flexit-ci600-firmware/raw/screens/readme/weather_spring.png" width="280" alt="Weather picture: Spring"><br><sub>Spring</sub></td>
+<td align="center"><img src="https://github.com/MSkjel/flexit-ci600-firmware/raw/screens/readme/weather_north.png" width="280" alt="Weather picture: Northern lights in Tromsø"><br><sub>Northern lights in Tromsø</sub></td>
+</tr>
+<tr>
+<td align="center"><img src="https://github.com/MSkjel/flexit-ci600-firmware/raw/screens/readme/weather_calm.png" width="280" alt="Weather picture: Calm"><br><sub>Calm, the bay a mirror</sub></td>
+<td align="center"><img src="https://github.com/MSkjel/flexit-ci600-firmware/raw/screens/readme/weather_storm.png" width="280" alt="Weather picture: Storm"><br><sub>Storm, the kayaker ashore</sub></td>
+<td align="center"><img src="https://github.com/MSkjel/flexit-ci600-firmware/raw/screens/readme/weather_waves.png" width="280" alt="Weather picture: The wave height with the forecast"><br><sub>The wave height, with the forecast</sub></td>
 </tr>
 </table>
 

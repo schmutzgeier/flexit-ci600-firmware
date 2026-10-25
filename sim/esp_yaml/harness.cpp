@@ -1404,6 +1404,66 @@ int main(int argc, char **argv) {
     std::string big = b.substr(0, f) + "{\"time\":\"" + std::string(5000, 'x') + "\"}," + b.substr(e, f - e);
     met::Weather w3 = read(big, 512, &stopped);
     CHECK(stopped && w3.ok && w3.hours == 1, "an hour over 4 KB: %d hours, stopped %d", w3.hours, stopped);
+    // the waves from Oceanforecast, once MET Norway has answered for the forecast: read an hour at a time, the hour
+    // nearest now drawn, and inland a 422 and none until the next day
+    std::string ocean = "{\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[10.7522,59.9139]},"
+                        "\"properties\":{\"meta\":{\"updated_at\":\"2026-10-19T10:08:45Z\"},\"timeseries\":[";
+    for (int i = 0; i < 30; i++) {  // from 12:00 UTC, half an hour ahead
+      int y, mo, d;
+      uint32_t t = 1792411200u + (uint32_t) i * 3600u;
+      met::civil_from_days((int32_t) (t / 86400), &y, &mo, &d);
+      char e[320];
+      snprintf(e, sizeof e,
+               "%s{\"time\":\"%04d-%02d-%02dT%02d:00:00Z\",\"data\":{\"instant\":{\"details\":{"
+               "\"sea_surface_wave_from_direction\":208.2,\"sea_surface_wave_height\":%.1f,\"sea_water_speed\":0.3,"
+               "\"sea_water_temperature\":12.7,\"sea_water_to_direction\":16.5}}}}",
+               i ? "," : "", y, mo, d, (int) (t % 86400 / 3600), 0.6 + 0.1 * i);
+      ocean += e;
+    }
+    ocean += "]}}";
+    CHECK(!strcmp(met::sea_url, "https://api.met.no/weatherapi/oceanforecast/2.0/complete?lat=59.9139&lon=10.7522") &&
+              met::sea_due(),
+          "waves not due: %s", met::sea_url);
+    panel_http.body = ocean;
+    panel_http.last_modified = "Mon, 19 Oct 2026 10:08:45 GMT";
+    panel_http.expires = "Mon, 19 Oct 2026 14:00:00 GMT";
+    met::fetch_sea();
+    CHECK(panel_http.url == met::sea_url && panel_http.sent.empty() && met::sea.ok &&
+              met::sea.hours == met::SEA_HOURS && met::sea.time[0] == 1792411200 &&
+              fabsf(met::wave_at(met::sea, 1792409400) - 0.6f) < 0.01f &&
+              fabsf(met::wave_at(met::sea, 1792411200 + 5 * 3600 + 600) - 1.1f) < 0.01f &&
+              met::wave_at(met::sea, 1792411200 + 40 * 3600) < 0,
+          "waves read as %d hours, %.1f m now", met::sea.hours, met::wave_at(met::sea, 1792409400));
+    CHECK(met::sea_not_before == 1792418400 && !met::sea_due() && met::sea_modified == panel_http.last_modified,
+          "waves asked for again before Expires: %u", (unsigned) met::sea_not_before);
+    {
+      std::vector<char> buf(met::SeaReader::SIZE + 1);
+      met::SeaReader rd(buf.data());
+      bool stopped = false;
+      for (size_t at = 0, room; at < ocean.size() && !stopped; at += room) {
+        char *p = rd.space(room);
+        room = std::min<size_t>(room, 1);
+        memcpy(p, ocean.data() + at, room);
+        stopped = !rd.got(room);
+      }
+      CHECK(stopped && rd.sea.hours == met::SEA_HOURS && rd.sea.height[3] == met::sea.height[3],
+            "waves a byte at a time: %d hours", rd.sea.hours);
+    }
+    met::Sea had = met::sea;
+    panel_http.status = 422;  // not at sea
+    panel_http.body = "{\"error\":\"Location not in ocean\"}";
+    met::sea_not_before = 0;
+    met::fetch_sea();
+    CHECK(!met::sea.ok && met::sea_not_before == 1792409400 + 86400 && met::sea_backoff_s == 0 &&
+              panel_http.sent.size() == 1 && panel_http.sent[0].value == "Mon, 19 Oct 2026 10:08:45 GMT",
+          "inland: waves %d, next at %u", met::sea.ok, (unsigned) met::sea_not_before);
+    panel_http.status = 503;
+    met::sea_not_before = 0;
+    met::fetch_sea();
+    CHECK(met::sea_backoff_s == 3600 && met::sea_not_before == 1792409400 + 3600, "waves: no back-off after a 503");
+    panel_http.status = 200;
+    met::sea = had;
+    met::sea_backoff_s = 0;
     flexit::panel::picture::show("weather");
     CHECK(picture("weather", 6000) >= 0, "weather picture not shown");
     CHECK(pn_pic(&pw, &ph) == 2 && pw == 320 && ph == 240, "weather picture %dx%d", pw, ph);
@@ -1426,7 +1486,7 @@ int main(int argc, char **argv) {
     CHECK(picture("weather with the forecast", 3000) >= 0, "weather picture with the forecast not shown");
     pn_shot(outdir, "esp_weather_forecast");
     met::with_forecast = false;
-    ram_block = 8 * 1024;  // the scene's biggest piece is about 14 KB
+    ram_block = 8 * 1024;  // the scene's biggest piece is about 9 KB
     met::redraw();
     run(20);
     CHECK(!met::canvas && panel_picture_status.state == "weather: no RAM to draw it",

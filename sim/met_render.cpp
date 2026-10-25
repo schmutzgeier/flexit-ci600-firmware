@@ -6,7 +6,6 @@
 #include "met_scene.h"
 #include "sim.h"
 #include <cstdio>
-#include <deque>
 #include <fstream>
 #include <map>
 #include <sstream>
@@ -59,6 +58,12 @@ static Weather wx(const char *symbol, float cloud, float rain = 0, float temp = 
   return w;
 }
 
+// w with Oceanforecast's wave height, m
+static Weather waves(Weather w, float height) {
+  w.wave = height;
+  return w;
+}
+
 static void render(const char *dir, const Case &c) {
   static Scene s;
   static Sprite sprite[SPRITES];
@@ -72,7 +77,8 @@ static void render(const char *dir, const Case &c) {
     static const char *const NEXT[] = {"", "partlycloudy_day", "cloudy", "lightrain", "fair_night", ""};
     for (int i = 0; i < 16; i++) {
       const char *sym = NEXT[i / 3 % 6][0] ? NEXT[i / 3 % 6] : w.symbol;
-      w.hour[w.hours++] = {w.time + (uint32_t) i * 3600, w.temp + 3 * sinf(i / 4.0f), icon_of(sym)};
+      w.hour[w.hours++] = {w.time + (uint32_t) i * 3600, w.temp + 3 * sinf(i / 4.0f), icon_of(sym),
+                           std::max(0.0f, w.wind + 2 * sinf(i / 3.0f)), (int16_t) (w.wind_from + 20 * i)};
     }
   }
   build(s, w, c.lat, c.lon, c.t, c.forecast, offset_at(c.t), c.o);
@@ -124,16 +130,31 @@ int main(int argc, char **argv) {
       {"17_rain_forecast", utc(2026, 10, 20, 10, 0), wx("lightrain", 92, 0.4f, 9, 85, 50, 20), true},
       {"18_snow_forecast", utc(2026, 1, 15, 11, 0), wx("snow", 96, 1, -4, 90, 60, 20), true},
       {"19_sunset_forecast", utc(2026, 10, 19, 15, 45), wx("fair_day", 15, 0, 7, 10, 5, 5), true},
-      // seasons, landscapes, the sky, signs of life
+      // seasons, the sky, signs of life
       {"21_spring", utc(2026, 4, 20, 10, 0), wx("fair_day", 30, 0, 9, 20, 10, 10)},
       {"22_winter_bare", utc(2026, 12, 5, 12, 0), wx("cloudy", 90, 0, 3, 80, 40, 10)},
       {"23_snowy_spruces", utc(2026, 1, 15, 12, 0), wx("fair_day", 20, 0, -8, 10, 10, 10)},
-      {"24_coast", utc(2026, 7, 10, 13, 0), wx("fair_day", 25, 0, 19, 15, 10, 10, 0, 7), false, {G_COAST}},
-      {"25_coast_night", utc(2026, 9, 10, 21, 30), wx("clearsky_night", 5, 0, 11, 0, 0, 5, 0, 4), false, {G_COAST}},
-      {"26_mountains", utc(2026, 6, 21, 8, 0), wx("partlycloudy_day", 40, 0, 12, 30, 20, 10), false, {G_MOUNTAINS}},
-      {"27_mountains_winter_night", utc(2026, 2, 10, 20, 0), wx("clearsky_night", 5, 0, -12), false, {G_MOUNTAINS}},
-      {"28_city_night", utc(2026, 11, 3, 19, 0), wx("partlycloudy_night", 40, 0, 4, 30, 20, 10), false, {G_CITY}},
-      {"29_city_day", utc(2026, 8, 3, 11, 0), wx("clearsky_day", 5, 0, 24), false, {G_CITY}},
+      // the base picture, as on the artboard, and who's out in rain, snow and fog
+      {"24_full_moon_aurora",
+       utc(2027, 1, 21, 18, 0),
+       wx("clearsky_night", 3, 0, 3, 0, 0, 3),
+       false,
+       {G_HILLS, A_ALWAYS, 30}},
+      {"25_rain_dusk",
+       utc(2026, 10, 20, 16, 30),
+       wx("rain", 96, 1.5f, 9, 90, 60, 20, 0, 6),
+       false,
+       {G_HILLS, A_AUTO, 30}},
+      {"26_white_winter", utc(2026, 1, 15, 11, 0), wx("clearsky_day", 3, 0, -8)},
+      {"27_snow_night", utc(2026, 1, 15, 17, 30), wx("snow", 96, 1, -4, 90, 60, 20), false, {G_HILLS, A_AUTO, 30}},
+      {"28_fog_night", utc(2026, 10, 19, 19, 0), wx("fog", 30, 0, 6, 20, 5, 5, 90)},
+      {"29_heather", utc(2026, 8, 20, 11, 0), wx("fair_day", 20, 0, 16, 10, 5, 10)},
+      {"35_gale", utc(2026, 10, 19, 11, 0), wx("fair_day", 30, 0, 10, 20, 10, 10, 0, 15)},
+      {"36_calm", utc(2026, 10, 19, 14, 0), wx("clearsky_day", 3, 0, 9, 0, 0, 3, 0, 0.1f)},
+      {"37_storm", utc(2026, 10, 19, 11, 0), wx("rain", 96, 1.5f, 9, 90, 60, 20, 0, 26)},
+      {"38_waves_forecast", utc(2026, 10, 19, 11, 30), waves(wx("partlycloudy_day", 45, 0, 8, 30, 15, 10, 0, 6), 1.2f),
+       true},
+      {"39_swell", utc(2026, 10, 19, 11, 0), waves(wx("fair_day", 20, 0, 9, 10, 5, 10, 0, 1), 2.5f)},
       {"30_stars_orion", utc(2027, 1, 20, 22, 0), wx("clearsky_night", 2, 0, -6), false, {G_HILLS, A_OFF}},
       {"31_aurora", utc(2026, 11, 20, 21, 0), wx("clearsky_night", 5, 0, -7), false, {G_HILLS, A_ALWAYS}, 69.65, 18.96},
       {"32_rainbow", utc(2026, 8, 12, 15, 30), wx("lightrainshowers_day", 55, 0.6f, 16, 50, 20, 10)},
@@ -150,7 +171,7 @@ int main(int argc, char **argv) {
       {"43_may_17", utc(2026, 5, 17, 11, 0), wx("fair_day", 25, 0, 14, 20, 10, 10, 0, 5)},
       {"44_midsummer", utc(2026, 6, 23, 20, 30), wx("fair_night", 10, 0, 15)},
       {"45_halloween", utc(2026, 10, 31, 19, 0), wx("clearsky_night", 10, 0, 3)},
-      {"46_valentine", utc(2026, 2, 14, 15, 0), wx("partlycloudy_day", 50, 0, 1, 40, 20, 10)},
+      {"46_pride", utc(2026, 6, 28, 11, 0), wx("fair_day", 25, 0, 19, 15, 10, 10, 0, 5)},
       {"47_olsok", utc(2026, 7, 29, 12, 0), wx("fair_day", 20, 0, 21, 10, 10, 10, 0, 4)},
       {"48_election_day", utc(2029, 9, 10, 13, 0), wx("partlycloudy_day", 50, 0, 13, 40, 20, 10, 0, 6)},
       {"49_kings_day_tromso",
@@ -187,19 +208,6 @@ int main(int argc, char **argv) {
       printf("parse failed\n");
     }
   }
-  // the holidays again in the other landscapes
-  static std::deque<std::string> names;  // d.name points into these, and a deque doesn't move them as it grows
-  std::vector<Case> more;
-  for (const Case &c : cases)
-    if (c.name[0] == '4')
-      for (Ground g : {G_COAST, G_MOUNTAINS, G_CITY}) {
-        Case d = c;
-        names.push_back(std::string(c.name) + (g == G_COAST ? "_coast" : g == G_MOUNTAINS ? "_mountains" : "_city"));
-        d.name = names.back().c_str();
-        d.o.ground = g;
-        more.push_back(d);
-      }
-  cases.insert(cases.end(), more.begin(), more.end());
   for (const Case &c : cases)
     render(dir, c);
 }

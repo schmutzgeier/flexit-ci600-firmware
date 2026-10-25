@@ -4,9 +4,6 @@ on:
   pull_request:
   workflow_call:
 
-env:
-  ESP_REF: panel  # the esphome-flexit-modbus-server branch the link is tested against
-
 # The apt packages and ccache's objects come from the cache, LVGL comes without its history. The timeouts stop a
 # stalled package mirror early.
 jobs:
@@ -53,11 +50,7 @@ jobs:
         with:
           fetch-depth: 0  # the tags, for the version
       - run: git submodule update --init --depth 1
-      - uses: actions/checkout@v7
-        with:
-          repository: MSkjel/esphome-flexit-modbus-server
-          ref: ${{ env.ESP_REF }}
-          path: esp
+      - uses: ./.github/actions/esp
       - uses: ./.github/actions/apt
         with:
           packages: gcc-multilib g++-multilib ccache
@@ -82,11 +75,7 @@ jobs:
         with:
           fetch-depth: 0  # the tags, for the version
       - run: git submodule update --init --depth 1
-      - uses: actions/checkout@v7
-        with:
-          repository: MSkjel/esphome-flexit-modbus-server
-          ref: ${{ env.ESP_REF }}
-          path: esp
+      - uses: ./.github/actions/esp
       - uses: ./.github/actions/apt
         with:
           packages: gcc-multilib g++-multilib ccache

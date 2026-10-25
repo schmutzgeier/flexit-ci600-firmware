@@ -1,0 +1,39 @@
+# The esphome-flexit-modbus-server the link is tested against, from the same owner as this repo (the PR's head for
+# a pull request) and the branch of the same name. Falls back to that owner's panel branch, then to MSkjel's,
+# so a tag or a branch the ESP repo doesn't have still gets one.
+name: esp
+description: The ESP repo for the same fork and branch
+inputs:
+  path:
+    description: Where to check it out
+    default: esp
+  fallback-ref:
+    description: The ESP branch when the ESP repo has none named like this one
+    default: panel
+runs:
+  using: composite
+  steps:
+    - id: pick
+      shell: bash
+      env:
+        OWNER: ${{ github.event.pull_request.head.repo.owner.login || github.repository_owner }}
+        BRANCH: ${{ github.head_ref || github.ref_name }}
+        FALLBACK: ${{ inputs.fallback-ref }}
+      run: |
+        has() { git ls-remote --exit-code --heads "https://github.com/$1/esphome-flexit-modbus-server.git" "$2" >/dev/null 2>&1; }
+        for c in "$OWNER $BRANCH" "$OWNER $FALLBACK" "MSkjel $FALLBACK"; do
+          set -- $c
+          if has "$1" "$2"; then
+            echo "ESP repo: $1/esphome-flexit-modbus-server@$2"
+            echo "repo=$1/esphome-flexit-modbus-server" >> "$GITHUB_OUTPUT"
+            echo "ref=$2" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+        done
+        echo "::error::no esphome-flexit-modbus-server for $OWNER/$BRANCH"
+        exit 1
+    - uses: actions/checkout@v7
+      with:
+        repository: ${{ steps.pick.outputs.repo }}
+        ref: ${{ steps.pick.outputs.ref }}
+        path: ${{ inputs.path }}
